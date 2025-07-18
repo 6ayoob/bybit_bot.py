@@ -7,18 +7,22 @@ import ta
 from apscheduler.schedulers.background import BackgroundScheduler
 from pybit import HTTP
 from telegram import Bot
+from dotenv import load_dotenv
 
-# ------------------ الإعدادات ------------------
-API_KEY = "tLgcha0kFzPnjIKGhQ"
-API_SECRET = "YMeUOTHgyP59msCjxDfR0qAdHiCKJTo6ePSn"
-BOT_TOKEN = "7800699278:AAEdMakvUEwysq-s0k9MsK6k4b4ucyHRfT4"
-CHAT_ID = 658712542  # استبدله بمعرف التيليجرام الخاص بك
-RISK_PERCENT = 10  # نسبة المخاطرة من رأس المال
-POSITION_TRACKER_FILE = "489727585"
-client = HTTP("https://api.bybit.com", api_key=API_KEY, api_secret=API_SECRET)
+# تحميل المتغيرات البيئية
+load_dotenv()
+
+API_KEY = os.getenv("BYBIT_API_KEY")
+API_SECRET = os.getenv("BYBIT_API_SECRET")
+USE_TESTNET = os.getenv("USE_TESTNET", "False").lower() == "true"
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+CHAT_ID = int(os.getenv("CHAT_ID"))
+RISK_PERCENT = float(os.getenv("RISK_PERCENT", 10))
+POSITION_TRACKER_FILE = os.getenv("POSITION_TRACKER_FILE", "positions.json")
+
+ENDPOINT = "https://api-testnet.bybit.com" if USE_TESTNET else "https://api.bybit.com"
+client = HTTP(ENDPOINT, api_key=API_KEY, api_secret=API_SECRET)
 bot = Bot(token=BOT_TOKEN)
-
-# ------------------ وظائف مساعدة ------------------
 
 def send_telegram_message(text):
     try:
@@ -37,10 +41,12 @@ def save_positions(positions):
         json.dump(positions, f, indent=4)
 
 def get_account_balance():
-    balance_data = client.get_wallet_balance()
-    return float(balance_data.get('result', {}).get('USDT', {}).get('available_balance', 0))
-
-# ------------------ 1: جلب أعلى العملات ------------------
+    try:
+        balance_data = client.get_wallet_balance()
+        return float(balance_data.get('result', {}).get('USDT', {}).get('available_balance', 0))
+    except Exception as e:
+        print(f"Error fetching balance: {e}")
+        return 0
 
 def get_top_spot_symbols():
     url = "https://api.bybit.com/spot/v1/tickers"
@@ -65,8 +71,6 @@ def get_top_spot_symbols():
         print(f"Volume fetch error: {e}")
         return []
 
-# ------------------ 2: تحليل EMA + RSI ------------------
-
 def get_klines(symbol, interval='1h', limit=100):
     url = "https://api.bybit.com/spot/quote/v1/kline"
     params = {"symbol": symbol, "interval": interval, "limit": limit}
@@ -74,9 +78,15 @@ def get_klines(symbol, interval='1h', limit=100):
         response = requests.get(url, params=params, timeout=10)
         response.raise_for_status()
         data = response.json()
+        if data.get('ret_code') != 0:
+            print(f"API error: {data.get('ret_msg')}")
+            return None
         df = pd.DataFrame(data['result'])
+        if df.empty:
+            return None
         df.columns = ['open_time', 'open', 'high', 'low', 'close', 'volume']
-        df['close'] = pd.to_numeric(df['close'])
+        for col in ['open', 'high', 'low', 'close', 'volume']:
+            df[col] = pd.to_numeric(df[col], errors='coerce')
         return df
     except Exception as e:
         print(f"Klines error for {symbol}: {e}")
@@ -92,20 +102,26 @@ def should_enter_trade(symbol):
     df['rsi'] = ta.momentum.rsi(df['close'], window=14)
     latest = df.iloc[-1]
 
+    if pd.isna(latest['ema9']) or pd.isna(latest['ema21']) or pd.isna(latest['rsi']):
+        return None
+
     if latest['ema9'] > latest['ema21'] and latest['rsi'] < 30:
         return "Buy"
     elif latest['ema9'] < latest['ema21'] and latest['rsi'] > 70:
         return "Sell"
     return None
 
-# ------------------ 3: تنفيذ الصفقة ------------------
-
 def manage_risk_and_place_order(symbol, side, entry_price, sl_price, tp_price):
     positions = load_positions()
     if symbol in positions:
-        return  # صفقة مفتوحة مسبقًا
+        print(f"صفقة مفتوحة مسبقًا لـ {symbol}, تخطي.")
+        return
 
     balance = get_account_balance()
+    if balance == 0:
+        print("رصيد الحساب صفر، لا يمكن فتح صفقة.")
+        return
+
     trade_value = balance * (RISK_PERCENT / 100)
     qty = round(trade_value / entry_price, 6)
 
@@ -117,21 +133,29 @@ def manage_risk_and_place_order(symbol, side, entry_price, sl_price, tp_price):
             qty=qty,
             time_in_force="GoodTillCancel"
         )
+        if order.get('ret_code') != 0:
+            print(f"خطأ في تنفيذ الطلب: {order.get('ret_msg')}")
+            send_telegram_message(f"❌ فشل تنفيذ الطلب لـ {symbol}: {order.get('ret_msg')}")
+            return
+
         order_id = order['result']['order_id']
         positions[symbol] = {
-            "side": side, "qty": qty,
+            "side": side,
+            "qty": qty,
             "entry_price": entry_price,
             "sl": sl_price,
             "tp": tp_price,
             "order_id": order_id
         }
         save_positions(positions)
-        send_telegram_message(f"📈 صفقة جديدة: {symbol}\nالاتجاه: {side}\nالكمية: {qty}\nالسعر: {entry_price}\nSL: {sl_price}\nTP: {tp_price}")
+
+        send_telegram_message(
+            f"📈 صفقة جديدة: {symbol}\nالاتجاه: {side}\nالكمية: {qty}\nالسعر: {entry_price}\nوقف الخسارة: {sl_price}\nجني الأرباح: {tp_price}"
+        )
+        print(f"تم فتح صفقة {side} على {symbol} بكمية {qty}")
     except Exception as e:
         print(f"Order error: {e}")
         send_telegram_message(f"❌ فشل تنفيذ الصفقة لـ {symbol}: {e}")
-
-# ------------------ 4: المهمة المجدولة ------------------
 
 def trading_job():
     print("🔄 بدء الفحص الدوري...")
@@ -139,13 +163,14 @@ def trading_job():
     for symbol in top_symbols:
         signal = should_enter_trade(symbol)
         if signal:
-            price = float(get_klines(symbol).iloc[-1]['close'])
+            df = get_klines(symbol)
+            if df is None or df.empty:
+                continue
+            price = float(df.iloc[-1]['close'])
             sl = round(price * 0.98, 2) if signal == "Buy" else round(price * 1.02, 2)
             tp = round(price * 1.03, 2) if signal == "Buy" else round(price * 0.97, 2)
             manage_risk_and_place_order(symbol, signal, price, sl, tp)
     print("✅ تم تنفيذ المهمة.")
-
-# ------------------ تشغيل الجدولة ------------------
 
 if __name__ == "__main__":
     scheduler = BackgroundScheduler()
@@ -154,7 +179,6 @@ if __name__ == "__main__":
     send_telegram_message("✅ بوت التداول بدأ العمل ✅")
     print("🤖 تم تشغيل البوت بنجاح. يعمل كل 30 دقيقة...")
 
-    # إبقاء السكربت شغال دائمًا
     try:
         while True:
             time.sleep(60)
