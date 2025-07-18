@@ -5,11 +5,12 @@ import requests
 import pandas as pd
 import ta
 from apscheduler.schedulers.background import BackgroundScheduler
-from pybit.spot import HTTP  # تم التعديل هنا
+import pytz  # إضافة مكتبة pytz لدعم المناطق الزمنية
+from pybit.spot import HTTP  # استيراد HTTP بشكل صحيح لبوت Bybit Spot API
 from telegram import Bot
 from dotenv import load_dotenv
 
-# تحميل المتغيرات البيئية
+# تحميل المتغيرات البيئية من ملف .env
 load_dotenv()
 
 API_KEY = os.getenv("BYBIT_API_KEY")
@@ -173,7 +174,8 @@ def trading_job():
     print("✅ تم تنفيذ المهمة.")
 
 if __name__ == "__main__":
-    scheduler = BackgroundScheduler()
+    # استخدم pytz لتحديد المنطقة الزمنية
+    scheduler = BackgroundScheduler(timezone=pytz.timezone('Asia/Riyadh'))
     scheduler.add_job(trading_job, 'interval', minutes=30)
     scheduler.start()
     send_telegram_message("✅ بوت التداول بدأ العمل ✅")
