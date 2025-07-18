@@ -1,4 +1,6 @@
-pybit
 pandas
 ta
 python-dotenv
+python-telegram-bot==13.15
+flask
+pybit
