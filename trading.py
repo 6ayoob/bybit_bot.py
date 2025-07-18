@@ -5,7 +5,7 @@ import requests
 import pandas as pd
 import ta
 from apscheduler.schedulers.background import BackgroundScheduler
-from pybit.http import HTTP
+from pybit import HTTP
 from telegram import Bot
 from dotenv import load_dotenv
 
