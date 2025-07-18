@@ -1,3 +1,4 @@
 .env
 bybit_bot.log
+positions.json
 __pycache__/
