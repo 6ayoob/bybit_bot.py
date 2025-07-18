@@ -1,3 +1,8 @@
 flask
 python-telegram-bot==13.15
 pybit
+python-dotenv
+pandas
+ta
+apscheduler
+requests
