@@ -4,23 +4,22 @@ import time
 import requests
 import pandas as pd
 import ta
-import pytz
-from dotenv import load_dotenv
 from apscheduler.schedulers.background import BackgroundScheduler
-from pybit.inverse_perpetual import HTTP
+from pybit.spot import HTTP  # تم التعديل هنا
 from telegram import Bot
+from dotenv import load_dotenv
 
 # تحميل المتغيرات البيئية
 load_dotenv()
-API_KEY = os.getenv("API_KEY")
-API_SECRET = os.getenv("API_SECRET")
+
+API_KEY = os.getenv("BYBIT_API_KEY")
+API_SECRET = os.getenv("BYBIT_API_SECRET")
 USE_TESTNET = os.getenv("USE_TESTNET", "False").lower() == "true"
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHAT_ID = int(os.getenv("CHAT_ID"))
 RISK_PERCENT = float(os.getenv("RISK_PERCENT", 10))
 POSITION_TRACKER_FILE = os.getenv("POSITION_TRACKER_FILE", "positions.json")
 
-# إعدادات Bybit
 ENDPOINT = "https://api-testnet.bybit.com" if USE_TESTNET else "https://api.bybit.com"
 client = HTTP(ENDPOINT, api_key=API_KEY, api_secret=API_SECRET)
 bot = Bot(token=BOT_TOKEN)
@@ -173,10 +172,8 @@ def trading_job():
             manage_risk_and_place_order(symbol, signal, price, sl, tp)
     print("✅ تم تنفيذ المهمة.")
 
-# بدء المجدول
 if __name__ == "__main__":
-    tz = pytz.timezone("Asia/Riyadh")
-    scheduler = BackgroundScheduler(timezone=tz)
+    scheduler = BackgroundScheduler()
     scheduler.add_job(trading_job, 'interval', minutes=30)
     scheduler.start()
     send_telegram_message("✅ بوت التداول بدأ العمل ✅")
