@@ -5,12 +5,12 @@ import requests
 import pandas as pd
 import ta
 from apscheduler.schedulers.background import BackgroundScheduler
-import pytz
-from pybit.spot import HTTP  # استيراد التداول الفوري Spot من pybit
+from pybit.inverse_perpetual import HTTP  # للتداول الفوري (Inverse Perpetual)
 from telegram import Bot
 from dotenv import load_dotenv
+import pytz  # تأكد من تثبيت pytz عبر pip install pytz
 
-# تحميل المتغيرات البيئية من ملف .env
+# تحميل المتغيرات البيئية
 load_dotenv()
 
 API_KEY = os.getenv("BYBIT_API_KEY")
@@ -174,9 +174,8 @@ def trading_job():
     print("✅ تم تنفيذ المهمة.")
 
 if __name__ == "__main__":
-    import pytz
+    tz = pytz.timezone('Asia/Riyadh')  # ضبط المنطقة الزمنية باستخدام pytz
 
-    tz = pytz.timezone('Asia/Riyadh')
     scheduler = BackgroundScheduler(timezone=tz)
     scheduler.add_job(trading_job, 'interval', minutes=30)
     scheduler.start()
