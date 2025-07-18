@@ -5,10 +5,10 @@ import requests
 import pandas as pd
 import ta
 from apscheduler.schedulers.background import BackgroundScheduler
+from pytz import utc
 from pybit import HTTP
 from telegram import Bot
 from dotenv import load_dotenv
-
 # تحميل المتغيرات البيئية
 load_dotenv()
 
@@ -56,7 +56,6 @@ def get_top_spot_symbols():
         data = response.json()
         tickers = data.get('result', [])
         volume_data = []
-
         for ticker in tickers:
             symbol = ticker.get('symbol')
             try:
@@ -64,7 +63,6 @@ def get_top_spot_symbols():
                 volume_data.append({'symbol': symbol, 'volume': volume})
             except:
                 continue
-
         volume_data.sort(key=lambda x: x['volume'], reverse=True)
         return [item['symbol'] for item in volume_data[:5]]
     except Exception as e:
@@ -173,7 +171,7 @@ def trading_job():
     print("✅ تم تنفيذ المهمة.")
 
 if __name__ == "__main__":
-    scheduler = BackgroundScheduler()
+    scheduler = BackgroundScheduler(timezone=utc)
     scheduler.add_job(trading_job, 'interval', minutes=30)
     scheduler.start()
     send_telegram_message("✅ بوت التداول بدأ العمل ✅")
