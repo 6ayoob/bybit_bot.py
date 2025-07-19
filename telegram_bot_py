@@ -1,4 +1,4 @@
-from telegram.ext import Updater, CommandHandler
+rom telegram.ext import Updater, CommandHandler
 import logging
 import json
 import os
@@ -51,21 +51,3 @@ def stop_bot(update, context):
 def resume_bot(update, context):
     # تحتاج تنفيذ خاص لاستئناف البوت
     update.message.reply_text("تم استئناف البوت (خاصية تحت التطوير).")
-
-def main():
-    TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-    updater = Updater(TOKEN, use_context=True)
-    dp = updater.dispatcher
-
-    dp.add_handler(CommandHandler("start", start))
-    dp.add_handler(CommandHandler("help", help_command))
-    dp.add_handler(CommandHandler("status", status))
-    dp.add_handler(CommandHandler("positions", positions))
-    dp.add_handler(CommandHandler("stop", stop_bot))
-    dp.add_handler(CommandHandler("resume", resume_bot))
-
-    updater.start_polling()
-    updater.idle()
-
-if name == "__main__":
-    main()
