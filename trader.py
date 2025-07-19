@@ -10,7 +10,7 @@ API_KEY = "tLgcha0kFzPnjIKGhQ"
 API_SECRET = "YMeUOTHgyP59msCjxDfR0qAdHiCKJTo6ePSn"
 session = HTTP(api_key=API_KEY, api_secret=API_SECRET, testnet=False)
 
-CAPITAL = 1000
+CAPITAL = 45
 RISK_PERCENT = 0.02
 risk_manager = RiskManager(capital=CAPITAL, risk_percent=RISK_PERCENT)
 
