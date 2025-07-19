@@ -5,7 +5,7 @@ from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 from trader import load_open_positions
 
-BOT_TOKEN = "توكن_البوت_هنا"7800699278:AAEdMakvUEwysq-s0k9MsK6k4b4ucyHRfT4
+BOT_TOKEN = "7800699278:AAEdMakvUEwysq-s0k9MsK6k4b4ucyHRfT4"
 
 ALLOWED_USERS = [658712542]  # غيّر المعرف إلى معرفك
 
