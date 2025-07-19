@@ -1,0 +1,46 @@
+def execute_trade(symbol: str, take_profit_multiplier=3):
+    """
+    تنفيذ شراء وحفظ البيانات مع وقف خسارة وجني ربح
+    """
+    try:
+        df = fetch_klines(symbol, interval='30m', limit=100)
+        if df.empty:
+            logging.warning(f"{symbol} - لا توجد بيانات كافية")
+            return
+
+        current_price = df['close'].iloc[-1]
+
+        quantity, stop_loss = risk_manager.calculate_position_size(df, current_price)
+
+        if quantity == 0:
+            logging.warning(f"{symbol} - حجم الصفقة المحسوب صفر، تخطي التنفيذ")
+            return
+
+        buy_order = session.place_order(
+            category="spot",
+            symbol=symbol,
+            side="Buy",
+            order_type="Market",
+            qty=quantity
+        )
+
+        take_profit = current_price + take_profit_multiplier * (current_price - stop_loss)
+
+        position_data = {
+            "symbol": symbol,
+            "quantity": quantity,
+            "entry_price": current_price,
+            "stop_loss": stop_loss,
+            "take_profit": take_profit
+        }
+
+        save_open_position(position_data)
+
+        logging.info(f"✅ تم شراء {symbol} كمية {quantity} بسعر {current_price}")
+        logging.info(f"🚨 وقف الخسارة: {stop_loss} | 🎯 جني الربح: {take_profit}")
+
+        return buy_order
+
+    except Exception as e:
+        logging.error(f"[execute_trade] خطأ في {symbol}: {e}")
+        return None
