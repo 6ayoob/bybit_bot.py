@@ -5,19 +5,18 @@ import requests
 import pandas as pd
 import ta
 from apscheduler.schedulers.background import BackgroundScheduler
-import pytz  # إضافة مكتبة pytz لدعم المناطق الزمنية
-from pybit.spot import HTTP  # استيراد HTTP بشكل صحيح لبوت Bybit Spot API
+import pytz
+from pybit.spot import HTTP
 from telegram import Bot
 from dotenv import load_dotenv
 
-# تحميل المتغيرات البيئية من ملف .env
 load_dotenv()
 
-API_KEY = os.getenv("BYBIT_API_KEY")
-API_SECRET = os.getenv("BYBIT_API_SECRET")
+API_KEY = os.getenv("tLgcha0kFzPnjIKGhQ")
+API_SECRET = os.getenv("YMeUOTHgyP59msCjxDfR0qAdHiCKJTo6ePSn")
 USE_TESTNET = os.getenv("USE_TESTNET", "False").lower() == "true"
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-CHAT_ID = int(os.getenv("CHAT_ID"))
+BOT_TOKEN = os.getenv("7800699278:AAEdMakvUEwysq-s0k9MsK6k4b4ucyHRfT4")
+CHAT_ID = int(os.getenv("658712542"))
 RISK_PERCENT = float(os.getenv("RISK_PERCENT", 10))
 POSITION_TRACKER_FILE = os.getenv("POSITION_TRACKER_FILE", "positions.json")
 
@@ -44,7 +43,7 @@ def save_positions(positions):
 def get_account_balance():
     try:
         balance_data = client.get_wallet_balance()
-        return float(balance_data.get('result', {}).get('USDT', {}).get('available_balance', 0))
+        return float(balance_data.get('result', {}).get('USDT', {}).get('availableBalance', 0))
     except Exception as e:
         print(f"Error fetching balance: {e}")
         return 0
@@ -126,20 +125,23 @@ def manage_risk_and_place_order(symbol, side, entry_price, sl_price, tp_price):
     trade_value = balance * (RISK_PERCENT / 100)
     qty = round(trade_value / entry_price, 6)
 
+    if qty <= 0:
+        print(f"الكمية المحسوبة ل {symbol} غير صالحة: {qty}")
+        return
+
     try:
-        order = client.place_active_order(
+        order = client.place_order(
             symbol=symbol,
             side=side,
-            order_type="Market",
-            qty=qty,
-            time_in_force="GoodTillCancel"
+            orderType="MARKET",
+            qty=str(qty)
         )
         if order.get('ret_code') != 0:
             print(f"خطأ في تنفيذ الطلب: {order.get('ret_msg')}")
             send_telegram_message(f"❌ فشل تنفيذ الطلب لـ {symbol}: {order.get('ret_msg')}")
             return
 
-        order_id = order['result']['order_id']
+        order_id = order['result'].get('orderId', 'N/A')
         positions[symbol] = {
             "side": side,
             "qty": qty,
@@ -161,6 +163,9 @@ def manage_risk_and_place_order(symbol, side, entry_price, sl_price, tp_price):
 def trading_job():
     print("🔄 بدء الفحص الدوري...")
     top_symbols = get_top_spot_symbols()
+    if not top_symbols:
+        print("لا توجد رموز للتداول.")
+        return
     for symbol in top_symbols:
         signal = should_enter_trade(symbol)
         if signal:
@@ -168,13 +173,14 @@ def trading_job():
             if df is None or df.empty:
                 continue
             price = float(df.iloc[-1]['close'])
-            sl = round(price * 0.98, 2) if signal == "Buy" else round(price * 1.02, 2)
-            tp = round(price * 1.03, 2) if signal == "Buy" else round(price * 0.97, 2)
+            sl = round(price * 0.98, 6) if signal == "Buy" else round(price * 1.02, 6)
+            tp = round(price * 1.03, 6) if signal == "Buy" else round(price * 0.97, 6)
             manage_risk_and_place_order(symbol, signal, price, sl, tp)
+        else:
+            print(f"لا توجد إشارة تداول لـ {symbol}")
     print("✅ تم تنفيذ المهمة.")
 
 if __name__ == "__main__":
-    # استخدم pytz لتحديد المنطقة الزمنية
     scheduler = BackgroundScheduler(timezone=pytz.timezone('Asia/Riyadh'))
     scheduler.add_job(trading_job, 'interval', minutes=30)
     scheduler.start()
