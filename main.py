@@ -1,10 +1,10 @@
 import logging
-import threading
-import time
 from apscheduler.schedulers.background import BackgroundScheduler
 from scanner import analyze_coin
 from trader import execute_trade, monitor_positions
 from telegram_bot import send_message, run_telegram_bot
+import threading
+import time
 
 coins_list = [
     "BTCUSDT", "ETHUSDT", "BNBUSDT", "XRPUSDT", "ADAUSDT",
@@ -38,22 +38,18 @@ if __name__ == "__main__":
     scheduler = BackgroundScheduler()
     scheduler.add_job(job, 'interval', minutes=30)
     scheduler.start()
-    logging.info("✅ تم بدء جدولة فحص العملات كل 30 دقيقة.")
+    logging.info("✅ تم بدء جدولة المهام.")
 
-    # تشغيل مراقبة الصفقات المفتوحة في ثريد منفصل مع حلقة دائمة
-    monitor_thread = threading.Thread(target=monitor_positions, kwargs={'sleep_seconds': 10}, daemon=True)
-    monitor_thread.start()
-    logging.info("✅ تم بدء مراقبة الصفقات المفتوحة في ثريد مستقل.")
-
-    # تشغيل بوت التليجرام في ثريد مستقل
+    monitor_thread = threading.Thread(target=monitor_positions, daemon=True)
     telegram_thread = threading.Thread(target=run_telegram_bot, daemon=True)
-    telegram_thread.start()
-    logging.info("✅ تم تشغيل بوت التليجرام في ثريد مستقل.")
 
-    # إبقاء البرنامج شغالًا
+    monitor_thread.start()
+    telegram_thread.start()
+
+    logging.info("✅ تم تشغيل مراقبة الصفقات وبوت التليجرام في الخلفية.")
+
     try:
         while True:
-            time.sleep(60)
-    except (KeyboardInterrupt, SystemExit):
-        logging.info("إيقاف البوت...")
-        scheduler.shutdown()
+            time.sleep(1)
+    except KeyboardInterrupt:
+        logging.info("⏹️ تم إيقاف البرنامج.")
