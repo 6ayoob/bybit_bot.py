@@ -6,7 +6,6 @@ from utils import fetch_klines
 from pybit.unified_trading import HTTP
 from telegram_bot import send_message
 
-# إعداد جلسة Bybit Spot (ضع مفاتيحك هنا)
 API_KEY = "tLgcha0kFzPnjIKGhQ"
 API_SECRET = "YMeUOTHgyP59msCjxDfR0qAdHiCKJTo6ePSn"
 session = HTTP(api_key=API_KEY, api_secret=API_SECRET, testnet=False)
@@ -39,9 +38,6 @@ def remove_position(symbol):
         json.dump(positions, f, indent=4)
 
 def execute_trade(symbol: str, take_profit_multiplier=3):
-    """
-    تنفيذ شراء وحفظ البيانات مع وقف خسارة وجني ربح
-    """
     try:
         df = fetch_klines(symbol, interval='30m', limit=100)
         if df.empty:
@@ -121,3 +117,5 @@ def monitor_positions():
                 qty=quantity
             )
             logging.info(f"🎯 جني الربح تحقق لـ {symbol}، تم البيع بسعر {current_price}")
+            send_message(f"🎯 جني الربح تحقق لـ {symbol}، تم البيع بسعر {current_price}")
+            remove_position(symbol)
