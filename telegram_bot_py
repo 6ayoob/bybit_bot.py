@@ -22,32 +22,49 @@ def help_command(update, context):
 /help - قائمة الأوامر
 /status - حالة البوت
 /positions - الصفقات المفتوحة
-/stop - إيقاف البوت مؤقتًا (تحتاج تنفيذ خاص)
-/resume - استئناف البوت (تحتاج تنفيذ خاص)
+/stop - إيقاف البوت مؤقتًا (تحتاج تنفيذ)
+/resume - استئناف البوت (تحتاج تنفيذ)
 """
     update.message.reply_text(commands)
 
 def status(update, context):
-    update.message.reply_text("البوت يعمل بشكل طبيعي.")
+    update.message.reply_text("✅ البوت يعمل بشكل طبيعي.")
 
 def positions(update, context):
     if os.path.exists(OPEN_POSITIONS_FILE):
         with open(OPEN_POSITIONS_FILE, "r") as f:
             positions = json.load(f)
         if positions:
-            msg = "الصفقات المفتوحة:\n"
+            msg = "📊 الصفقات المفتوحة:\n"
             for pos in positions:
                 msg += f"{pos['symbol']} - الكمية: {pos['quantity']} - سعر الدخول: {pos['entry_price']}\n"
         else:
-            msg = "لا توجد صفقات مفتوحة حالياً."
+            msg = "🚫 لا توجد صفقات مفتوحة حاليًا."
     else:
-        msg = "لا توجد صفقات مفتوحة حالياً."
+        msg = "🚫 لم يتم العثور على ملف الصفقات."
+
     update.message.reply_text(msg)
 
 def stop_bot(update, context):
-    # تحتاج تنفيذ خاص لإيقاف البوت (مثلاً تغيير حالة في ملف أو قاعدة بيانات)
-    update.message.reply_text("تم إيقاف البوت مؤقتًا (خاصية تحت التطوير).")
+    update.message.reply_text("🛑 تم إيقاف البوت مؤقتًا (خاصية قيد التطوير).")
 
 def resume_bot(update, context):
-    # تحتاج تنفيذ خاص لاستئناف البوت
-    update.message.reply_text("تم استئناف البوت (خاصية تحت التطوير).")
+    update.message.reply_text("▶️ تم استئناف البوت (خاصية قيد التطوير).")
+
+def main():
+    TOKEN = os.getenv("7800699278:AAEdMakvUEwysq-s0k9MsK6k4b4ucyHRfT4")
+    updater = Updater(TOKEN, use_context=True)
+    dp = updater.dispatcher
+
+    dp.add_handler(CommandHandler("start", start))
+    dp.add_handler(CommandHandler("help", help_command))
+    dp.add_handler(CommandHandler("status", status))
+    dp.add_handler(CommandHandler("positions", positions))
+    dp.add_handler(CommandHandler("stop", stop_bot))
+    dp.add_handler(CommandHandler("resume", resume_bot))
+
+    updater.start_polling()
+    updater.idle()
+
+if name == "__main__":
+    main()
