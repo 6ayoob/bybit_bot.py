@@ -15,7 +15,7 @@ load_dotenv()
 API_KEY = os.getenv("tLgcha0kFzPnjIKGhQ")
 API_SECRET = os.getenv("YMeUOTHgyP59msCjxDfR0qAdHiCKJTo6ePSn")
 USE_TESTNET = os.getenv("USE_TESTNET", "False").lower() == "true"
-BOT_TOKEN = os.getenv("7800699278:AAEdMakvUEwysq-s0k9MsK6k4b4ucyHRfT4")
+BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHAT_ID = int(os.getenv("CHAT_ID"))
 RISK_PERCENT = float(os.getenv("RISK_PERCENT", 10))
 POSITION_TRACKER_FILE = os.getenv("POSITION_TRACKER_FILE", "positions.json")
