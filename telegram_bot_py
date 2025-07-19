@@ -1,0 +1,15 @@
+from telegram import Bot
+import logging
+import os
+
+# استبدل TOKEN و CHAT_ID بقيمك الخاصة
+BOT_TOKEN = os.getenv("7800699278:AAEdMakvUEwysq-s0k9MsK6k4b4ucyHRfT4")
+CHAT_ID = os.getenv("658712542")
+
+bot = Bot(token=BOT_TOKEN)
+
+def send_message(text: str):
+    try:
+        bot.send_message(chat_id=CHAT_ID, text=text)
+    except Exception as e:
+        logging.error(f"[Telegram] خطأ في إرسال الرسالة: {e}")
