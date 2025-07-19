@@ -1,4 +1,5 @@
 import logging
+import pytz
 from apscheduler.schedulers.background import BackgroundScheduler
 from scanner import analyze_coin
 from trader import execute_trade, monitor_positions
@@ -19,7 +20,7 @@ def job():
     for symbol in coins_list:
         try:
             signal = analyze_coin(symbol)
-            if signal:
+            if signal and signal.lower() == "buy":
                 logging.info(f"📌 إشارة شراء على {symbol}, يتم التنفيذ...")
                 order = execute_trade(symbol)
                 if order:
@@ -27,16 +28,16 @@ def job():
                 else:
                     send_message(f"⚠️ فشل تنفيذ الصفقة على {symbol}.")
             else:
-                logging.info(f"✖️ لا توجد إشارة على {symbol}")
+                logging.info(f"✖️ لا توجد إشارة شراء على {symbol}")
         except Exception as e:
             logging.error(f"🚨 خطأ في تحليل أو تنفيذ {symbol}: {e}")
             send_message(f"❌ خطأ في البوت على {symbol}: {e}")
     logging.info("✅ انتهاء الفحص.")
 
 if __name__ == "__main__":
-    scheduler = BackgroundScheduler()
-    scheduler.add_job(job, 'interval', minutes=30)
-    scheduler.add_job(monitor_positions, 'interval', minutes=5)
+    scheduler = BackgroundScheduler(timezone=pytz.timezone('Asia/Riyadh'))
+    scheduler.add_job(job, 'interval', minutes=30, id="scan_job")
+    scheduler.add_job(monitor_positions, 'interval', minutes=5, id="monitor_job")
     scheduler.start()
     logging.info("✅ تم بدء جدولة المهام.")
 
