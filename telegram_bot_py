@@ -1,22 +1,16 @@
-from telegram.ext import Updater, CommandHandler
-import logging
-import json
 import os
+import json
 from dotenv import load_dotenv
+from telegram import Update
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
 load_dotenv()
-
 OPEN_POSITIONS_FILE = "open_positions.json"
 
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
-)
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("مرحبًا! استخدم /help لمعرفة الأوامر المتاحة.")
 
-def start(update, context):
-    update.message.reply_text("مرحبًا! استخدم /help لمعرفة الأوامر المتاحة.")
-
-def help_command(update, context):
+async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     commands = """
 /start - بدء المحادثة
 /help - قائمة الأوامر
@@ -25,12 +19,12 @@ def help_command(update, context):
 /stop - إيقاف البوت مؤقتًا (تحتاج تنفيذ)
 /resume - استئناف البوت (تحتاج تنفيذ)
 """
-    update.message.reply_text(commands)
+    await update.message.reply_text(commands)
 
-def status(update, context):
-    update.message.reply_text("✅ البوت يعمل بشكل طبيعي.")
+async def status(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("✅ البوت يعمل بشكل طبيعي.")
 
-def positions(update, context):
+async def positions(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if os.path.exists(OPEN_POSITIONS_FILE):
         with open(OPEN_POSITIONS_FILE, "r") as f:
             positions = json.load(f)
@@ -42,29 +36,30 @@ def positions(update, context):
             msg = "🚫 لا توجد صفقات مفتوحة حاليًا."
     else:
         msg = "🚫 لم يتم العثور على ملف الصفقات."
+    await update.message.reply_text(msg)
 
-    update.message.reply_text(msg)
+async def stop_bot(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("🛑 تم إيقاف البوت مؤقتًا (خاصية قيد التطوير).")
 
-def stop_bot(update, context):
-    update.message.reply_text("🛑 تم إيقاف البوت مؤقتًا (خاصية قيد التطوير).")
-
-def resume_bot(update, context):
-    update.message.reply_text("▶️ تم استئناف البوت (خاصية قيد التطوير).")
+async def resume_bot(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("▶️ تم استئناف البوت (خاصية قيد التطوير).")
 
 def main():
-    TOKEN = os.getenv("7800699278:AAEdMakvUEwysq-s0k9MsK6k4b4ucyHRfT4")
-    updater = Updater(TOKEN, use_context=True)
-    dp = updater.dispatcher
+    TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+    if not TOKEN:
+        print("❌ لم يتم تعيين TELEGRAM_BOT_TOKEN في ملف .env")
+        return
 
-    dp.add_handler(CommandHandler("start", start))
-    dp.add_handler(CommandHandler("help", help_command))
-    dp.add_handler(CommandHandler("status", status))
-    dp.add_handler(CommandHandler("positions", positions))
-    dp.add_handler(CommandHandler("stop", stop_bot))
-    dp.add_handler(CommandHandler("resume", resume_bot))
+    application = ApplicationBuilder().token(TOKEN).build()
 
-    updater.start_polling()
-    updater.idle()
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("help", help_command))
+    application.add_handler(CommandHandler("status", status))
+    application.add_handler(CommandHandler("positions", positions))
+    application.add_handler(CommandHandler("stop", stop_bot))
+    application.add_handler(CommandHandler("resume", resume_bot))
+
+    application.run_polling()
 
 if name == "__main__":
     main()
