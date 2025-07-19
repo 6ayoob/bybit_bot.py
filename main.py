@@ -1,10 +1,9 @@
 import logging
 from apscheduler.schedulers.blocking import BlockingScheduler
 from scanner import analyze_coin
-from trader import execute_trade
+from trader import execute_trade, monitor_positions
 from telegram_bot import send_message
 
-# قائمة العملات (Top 30)
 coins_list = [
     "BTCUSDT", "ETHUSDT", "BNBUSDT", "XRPUSDT", "ADAUSDT",
     # أضف باقي العملات حسب الحاجة
@@ -20,7 +19,7 @@ def job():
         try:
             signal = analyze_coin(symbol)
             if signal:
-                logging.info(f"إشارة شراء قوية على {symbol}، تنفيذ صفقة...")
+                logging.info(f"إشارة شراء قوية على {symbol}, تنفيذ صفقة...")
                 order = execute_trade(symbol)
                 if order:
                     send_message(f"✅ تم شراء {symbol} بنجاح.")
@@ -37,7 +36,8 @@ def job():
 if name == "__main__":
     scheduler = BlockingScheduler()
     scheduler.add_job(job, 'interval', minutes=30)
-    logging.info("تم بدء جدولة البوت كل 30 دقيقة.")
+    scheduler.add_job(monitor_positions, 'interval', minutes=5)
+    logging.info("تم بدء جدولة البوت كل 30 دقيقة ومراقبة الصفقات كل 5 دقائق.")
     try:
         scheduler.start()
     except (KeyboardInterrupt, SystemExit):
